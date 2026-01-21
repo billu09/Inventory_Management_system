@@ -1,0 +1,13 @@
+# Frontend
+node_modules/
+dist/
+build/
+
+# Backend
+target/
+.metadata/
+
+# IDE
+.project
+.settings/
+.classpath
