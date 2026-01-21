@@ -1,20 +1,17 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../services/api";
 
+/* ================= FETCH ================= */
 export const fetchSales = createAsyncThunk(
   "sales/fetch",
   async (_, thunkAPI) => {
     try {
       const res = await api.get("/sales");
-
-      // ✅ works for BOTH formats
-      const payload = Array.isArray(res.data)
-        ? res.data
-        : Array.isArray(res.data?.data)
+      return Array.isArray(res.data?.data)
         ? res.data.data
+        : Array.isArray(res.data)
+        ? res.data
         : [];
-
-      return payload;
     } catch (err) {
       return thunkAPI.rejectWithValue(
         err.response?.data?.message || "Failed to load sales"
@@ -23,15 +20,12 @@ export const fetchSales = createAsyncThunk(
   }
 );
 
+/* ================= ADD ================= */
 export const addSale = createAsyncThunk(
   "sales/add",
   async ({ productId, quantity }, thunkAPI) => {
     try {
-      const res = await api.post("/sales", {
-        productId,
-        quantity,
-      });
-
+      const res = await api.post("/sales", { productId, quantity });
       return res.data?.data ?? res.data;
     } catch (err) {
       return thunkAPI.rejectWithValue(
@@ -43,7 +37,7 @@ export const addSale = createAsyncThunk(
   }
 );
 
-
+/* ================= UPDATE ================= */
 export const updateSale = createAsyncThunk(
   "sales/update",
   async ({ id, data }, thunkAPI) => {
@@ -58,6 +52,7 @@ export const updateSale = createAsyncThunk(
   }
 );
 
+/* ================= DELETE ================= */
 export const deleteSale = createAsyncThunk(
   "sales/delete",
   async (id, thunkAPI) => {
@@ -72,7 +67,7 @@ export const deleteSale = createAsyncThunk(
   }
 );
 
-const slice = createSlice({
+const salesSlice = createSlice({
   name: "sales",
   initialState: {
     list: [],
@@ -84,6 +79,7 @@ const slice = createSlice({
     builder
       .addCase(fetchSales.pending, (s) => {
         s.loading = true;
+        s.error = null;
       })
       .addCase(fetchSales.fulfilled, (s, a) => {
         s.loading = false;
@@ -93,19 +89,22 @@ const slice = createSlice({
         s.loading = false;
         s.error = a.payload;
       })
+
       .addCase(addSale.fulfilled, (s, a) => {
         if (a.payload) s.list.unshift(a.payload);
       })
+
       .addCase(updateSale.fulfilled, (s, a) => {
         if (!a.payload) return;
         s.list = s.list.map((x) =>
           x.id === a.payload.id ? a.payload : x
         );
       })
+
       .addCase(deleteSale.fulfilled, (s, a) => {
         s.list = s.list.filter((x) => x.id !== a.payload);
       });
   },
 });
 
-export default slice.reducer;
+export default salesSlice.reducer;

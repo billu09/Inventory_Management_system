@@ -8,6 +8,7 @@ import {
 } from "../../stores/slices/salesSlice";
 import { fetchProducts } from "../../stores/slices/productSlice";
 import toast from "react-hot-toast";
+import ConfirmDeleteModal from "../../components/ui/ConfirmDeleteModal";
 
 export default function SalesList() {
   const dispatch = useDispatch();
@@ -26,6 +27,10 @@ export default function SalesList() {
   const [editingId, setEditingId] = useState(null);
   const [editProductId, setEditProductId] = useState("");
   const [editQuantity, setEditQuantity] = useState("");
+
+  /* ===== DELETE STATE (NEW) ===== */
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     dispatch(fetchProducts());
@@ -50,13 +55,12 @@ export default function SalesList() {
       setQuantity("");
       toast.success("Sale added");
     } catch (err) {
-  toast.error(
-    typeof err === "string"
-      ? "Insufficient stock"
-      : "Failed To Add"
-  );
-}
-
+      toast.error(
+        typeof err === "string"
+          ? "Insufficient stock"
+          : "Failed To Add"
+      );
+    }
   };
 
   const startEdit = (sale) => {
@@ -84,14 +88,17 @@ export default function SalesList() {
     }
   };
 
-  const remove = async (id) => {
-    if (!window.confirm("Delete sale?")) return;
-
+  /* ===== CONFIRM DELETE (NEW, NO ALERT) ===== */
+  const confirmDelete = async () => {
     try {
-      await dispatch(deleteSale(id)).unwrap();
+      setDeleting(true);
+      await dispatch(deleteSale(deleteId)).unwrap();
       toast.success("Sale deleted");
     } catch {
       toast.error("Failed to delete sale");
+    } finally {
+      setDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -150,7 +157,7 @@ export default function SalesList() {
                 Edit
               </button>
               <button
-                onClick={() => remove(sale.id)}
+                onClick={() => setDeleteId(sale.id)}
                 className="bg-red-500 px-3 py-1 text-white rounded"
               >
                 Delete
@@ -159,6 +166,16 @@ export default function SalesList() {
           </li>
         ))}
       </ul>
+
+      {/* ===== DELETE MODAL (NEW) ===== */}
+      <ConfirmDeleteModal
+        open={!!deleteId}
+        title="Delete Sale"
+        message="Are you sure you want to delete this sale?"
+        loading={deleting}
+        onCancel={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

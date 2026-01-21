@@ -7,6 +7,7 @@ import {
   deleteProduct,
 } from "../../stores/slices/productSlice";
 import toast from "react-hot-toast";
+import ConfirmDeleteModal from "../../components/ui/ConfirmDeleteModal";
 
 export default function Products() {
   const dispatch = useDispatch();
@@ -22,6 +23,10 @@ export default function Products() {
   const [sellingPrice, setSellingPrice] = useState("");
   const [quantity, setQuantity] = useState("");
   const [editingId, setEditingId] = useState(null);
+
+  // ===== DELETE STATE (NEW) =====
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   // ===== LOAD PRODUCTS =====
   useEffect(() => {
@@ -73,14 +78,17 @@ export default function Products() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ===== DELETE =====
-  const removeProduct = async (id) => {
-    if (!window.confirm("Delete product?")) return;
+  // ===== CONFIRM DELETE (NEW, NO ALERT) =====
+  const confirmDelete = async () => {
     try {
-      await dispatch(deleteProduct(id)).unwrap();
+      setDeleting(true);
+      await dispatch(deleteProduct(deleteId)).unwrap();
       toast.success("Product deleted");
     } catch {
       toast.error("Failed to delete product");
+    } finally {
+      setDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -101,31 +109,39 @@ export default function Products() {
         </h2>
 
         <form onSubmit={submitProduct} className="space-y-3">
-          <input className="border p-2 rounded w-full"
+          <input
+            className="border p-2 rounded w-full"
             placeholder="Product name"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
 
-          <input className="border p-2 rounded w-full"
+          <input
+            className="border p-2 rounded w-full"
             placeholder="SKU"
             value={sku}
             onChange={(e) => setSku(e.target.value)}
           />
 
-          <input type="number" className="border p-2 rounded w-full"
+          <input
+            type="number"
+            className="border p-2 rounded w-full"
             placeholder="Cost Price"
             value={costPrice}
             onChange={(e) => setCostPrice(e.target.value)}
           />
 
-          <input type="number" className="border p-2 rounded w-full"
+          <input
+            type="number"
+            className="border p-2 rounded w-full"
             placeholder="Selling Price"
             value={sellingPrice}
             onChange={(e) => setSellingPrice(e.target.value)}
           />
 
-          <input type="number" className="border p-2 rounded w-full"
+          <input
+            type="number"
+            className="border p-2 rounded w-full"
             placeholder="Quantity"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
@@ -135,7 +151,10 @@ export default function Products() {
             {editingId && (
               <button
                 type="button"
-                onClick={() => { setEditingId(null); resetForm(); }}
+                onClick={() => {
+                  setEditingId(null);
+                  resetForm();
+                }}
                 className="px-3 py-1 bg-gray-200 rounded"
               >
                 Cancel
@@ -158,7 +177,10 @@ export default function Products() {
           {products.length === 0 && <li>No products found</li>}
 
           {products.map((p) => (
-            <li key={p.id} className="p-4 border rounded flex justify-between">
+            <li
+              key={p.id}
+              className="p-4 border rounded flex justify-between"
+            >
               <div>
                 <div className="font-bold">{p.name}</div>
                 <div className="text-sm text-gray-600">
@@ -177,7 +199,7 @@ export default function Products() {
                   Edit
                 </button>
                 <button
-                  onClick={() => removeProduct(p.id)}
+                  onClick={() => setDeleteId(p.id)}
                   className="px-3 py-1 bg-red-600 text-white rounded text-sm"
                 >
                   Delete
@@ -187,6 +209,16 @@ export default function Products() {
           ))}
         </ul>
       </section>
+
+      {/* ===== DELETE MODAL (NEW) ===== */}
+      <ConfirmDeleteModal
+        open={!!deleteId}
+        title="Delete Product"
+        message="Are you sure you want to delete this product?"
+        loading={deleting}
+        onCancel={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

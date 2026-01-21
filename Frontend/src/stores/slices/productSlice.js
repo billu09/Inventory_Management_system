@@ -1,13 +1,18 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../services/api";
 
-// ================= FETCH =================
+/* ================= FETCH PRODUCTS ================= */
 export const fetchProducts = createAsyncThunk(
   "products/fetch",
   async (_, thunkAPI) => {
     try {
       const res = await api.get("/products");
-      return res.data;
+
+      return Array.isArray(res.data?.data)
+        ? res.data.data
+        : Array.isArray(res.data)
+        ? res.data
+        : [];
     } catch (err) {
       return thunkAPI.rejectWithValue(
         err.response?.data || "Failed to load products"
@@ -16,13 +21,13 @@ export const fetchProducts = createAsyncThunk(
   }
 );
 
-// ================= ADD =================
+/* ================= ADD PRODUCT ================= */
 export const addProduct = createAsyncThunk(
   "products/add",
   async (product, thunkAPI) => {
     try {
       const res = await api.post("/products", product);
-      return res.data;
+      return res.data?.data ?? res.data;
     } catch (err) {
       return thunkAPI.rejectWithValue(
         err.response?.data || "Failed to add product"
@@ -31,13 +36,13 @@ export const addProduct = createAsyncThunk(
   }
 );
 
-// ================= UPDATE =================
+/* ================= UPDATE PRODUCT ================= */
 export const updateProduct = createAsyncThunk(
   "products/update",
   async ({ id, data }, thunkAPI) => {
     try {
       const res = await api.put(`/products/${id}`, data);
-      return res.data;
+      return res.data?.data ?? res.data;
     } catch (err) {
       return thunkAPI.rejectWithValue(
         err.response?.data || "Failed to update product"
@@ -46,7 +51,7 @@ export const updateProduct = createAsyncThunk(
   }
 );
 
-// ================= DELETE =================
+/* ================= DELETE PRODUCT ================= */
 export const deleteProduct = createAsyncThunk(
   "products/delete",
   async (id, thunkAPI) => {
@@ -61,6 +66,7 @@ export const deleteProduct = createAsyncThunk(
   }
 );
 
+/* ================= SLICE ================= */
 const productSlice = createSlice({
   name: "products",
   initialState: {
@@ -71,47 +77,32 @@ const productSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      // ===== FETCH =====
-      .addCase(fetchProducts.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+      .addCase(fetchProducts.pending, (s) => {
+        s.loading = true;
+        s.error = null;
       })
-      .addCase(fetchProducts.fulfilled, (state, action) => {
-        state.loading = false;
-
-        // ✅ IMPORTANT FIX
-        state.list = Array.isArray(action.payload?.data)
-          ? action.payload.data
-          : [];
+      .addCase(fetchProducts.fulfilled, (s, a) => {
+        s.loading = false;
+        s.list = a.payload;
       })
-      .addCase(fetchProducts.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
+      .addCase(fetchProducts.rejected, (s, a) => {
+        s.loading = false;
+        s.error = a.payload;
       })
 
-      // ===== ADD =====
-      .addCase(addProduct.fulfilled, (state, action) => {
-        if (action.payload?.data) {
-          state.list.push(action.payload.data);
-        }
+      .addCase(addProduct.fulfilled, (s, a) => {
+        if (a.payload) s.list.push(a.payload);
       })
 
-      // ===== UPDATE =====
-      .addCase(updateProduct.fulfilled, (state, action) => {
-        if (!action.payload?.data) return;
-
-        state.list = state.list.map((p) =>
-          p.id === action.payload.data.id
-            ? action.payload.data
-            : p
+      .addCase(updateProduct.fulfilled, (s, a) => {
+        if (!a.payload) return;
+        s.list = s.list.map((p) =>
+          p.id === a.payload.id ? a.payload : p
         );
       })
 
-      // ===== DELETE =====
-      .addCase(deleteProduct.fulfilled, (state, action) => {
-        state.list = state.list.filter(
-          (p) => p.id !== action.payload
-        );
+      .addCase(deleteProduct.fulfilled, (s, a) => {
+        s.list = s.list.filter((p) => p.id !== a.payload);
       });
   },
 });

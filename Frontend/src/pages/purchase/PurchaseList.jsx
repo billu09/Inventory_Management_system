@@ -8,6 +8,7 @@ import {
 } from "../../stores/slices/purchaseSlice";
 import { fetchProducts } from "../../stores/slices/productSlice";
 import toast from "react-hot-toast";
+import ConfirmDeleteModal from "../../components/ui/ConfirmDeleteModal";
 
 export default function PurchaseList() {
   const dispatch = useDispatch();
@@ -30,6 +31,10 @@ export default function PurchaseList() {
   const [editProductId, setEditProductId] = useState("");
   const [editQuantity, setEditQuantity] = useState("");
   const [editCostPrice, setEditCostPrice] = useState("");
+
+  /* ================= DELETE STATE (NEW) ================= */
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   /* ================= LOAD DATA ================= */
   useEffect(() => {
@@ -100,15 +105,17 @@ export default function PurchaseList() {
     }
   };
 
-  /* ================= DELETE ================= */
-  const remove = async (id) => {
-    if (!window.confirm("Delete purchase?")) return;
-
+  /* ================= CONFIRM DELETE (NEW) ================= */
+  const confirmDelete = async () => {
     try {
-      await dispatch(deletePurchase(id)).unwrap();
+      setDeleting(true);
+      await dispatch(deletePurchase(deleteId)).unwrap();
       toast.success("Purchase deleted");
     } catch {
       toast.error("Failed to delete purchase");
+    } finally {
+      setDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -244,7 +251,7 @@ export default function PurchaseList() {
                     Edit
                   </button>
                   <button
-                    onClick={() => remove(p.id)}
+                    onClick={() => setDeleteId(p.id)}
                     className="px-3 py-1 bg-red-500 text-white rounded"
                   >
                     Delete
@@ -255,6 +262,16 @@ export default function PurchaseList() {
           </li>
         ))}
       </ul>
+
+      {/* ================= DELETE MODAL (NEW) ================= */}
+      <ConfirmDeleteModal
+        open={!!deleteId}
+        title="Delete Purchase"
+        message="Are you sure you want to delete this purchase?"
+        loading={deleting}
+        onCancel={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

@@ -7,10 +7,10 @@ export const fetchPurchases = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const res = await api.get("/purchases");
-
-      // ✅ IMPORTANT FIX: unwrap ApiResponse
       return Array.isArray(res.data?.data)
         ? res.data.data
+        : Array.isArray(res.data)
+        ? res.data
         : [];
     } catch (err) {
       return thunkAPI.rejectWithValue(
@@ -28,9 +28,7 @@ export const addPurchase = createAsyncThunk(
   async (payload, thunkAPI) => {
     try {
       const res = await api.post("/purchases", payload);
-
-      // ✅ unwrap ApiResponse
-      return res.data?.data;
+      return res.data?.data ?? res.data;
     } catch (err) {
       return thunkAPI.rejectWithValue(
         err.response?.data?.message ||
@@ -47,9 +45,7 @@ export const updatePurchase = createAsyncThunk(
   async ({ id, data }, thunkAPI) => {
     try {
       const res = await api.put(`/purchases/${id}`, data);
-
-      // ✅ unwrap ApiResponse
-      return res.data?.data;
+      return res.data?.data ?? res.data;
     } catch (err) {
       return thunkAPI.rejectWithValue(
         err.response?.data?.message ||
@@ -85,46 +81,42 @@ const purchaseSlice = createSlice({
     loading: false,
     error: null,
   },
-  reducers: {},
+  reducers: {
+    clearPurchaseError: (state) => {
+      state.error = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
-      // ===== FETCH =====
-      .addCase(fetchPurchases.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+      .addCase(fetchPurchases.pending, (s) => {
+        s.loading = true;
+        s.error = null;
       })
-      .addCase(fetchPurchases.fulfilled, (state, action) => {
-        state.loading = false;
-        state.list = action.payload;
+      .addCase(fetchPurchases.fulfilled, (s, a) => {
+        s.loading = false;
+        s.list = a.payload;
       })
-      .addCase(fetchPurchases.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-
-      // ===== ADD =====
-      .addCase(addPurchase.fulfilled, (state, action) => {
-        if (action.payload) {
-          state.list.unshift(action.payload);
-        }
+      .addCase(fetchPurchases.rejected, (s, a) => {
+        s.loading = false;
+        s.error = a.payload;
       })
 
-      // ===== UPDATE =====
-      .addCase(updatePurchase.fulfilled, (state, action) => {
-        if (!action.payload) return;
+      .addCase(addPurchase.fulfilled, (s, a) => {
+        if (a.payload) s.list.unshift(a.payload);
+      })
 
-        state.list = state.list.map((p) =>
-          p.id === action.payload.id ? action.payload : p
+      .addCase(updatePurchase.fulfilled, (s, a) => {
+        if (!a.payload) return;
+        s.list = s.list.map((p) =>
+          p.id === a.payload.id ? a.payload : p
         );
       })
 
-      // ===== DELETE =====
-      .addCase(deletePurchase.fulfilled, (state, action) => {
-        state.list = state.list.filter(
-          (p) => p.id !== action.payload
-        );
+      .addCase(deletePurchase.fulfilled, (s, a) => {
+        s.list = s.list.filter((p) => p.id !== a.payload);
       });
   },
 });
 
+export const { clearPurchaseError } = purchaseSlice.actions;
 export default purchaseSlice.reducer;
